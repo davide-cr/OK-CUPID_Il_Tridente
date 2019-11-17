@@ -1,0 +1,458 @@
+---
+title: "OkCupid"
+output: html_document
+---
+<div style='text-align:justify'>
+
+NAME: ***Davide Croce,Simone Moreschi,Simone Trombettoni***
+
+NICKNAME: ***d.croce1, s.moreschi, s.trombettoni*** 
+
+TEAM: ***il_Tridente***
+
+### Summary
+<div style='text-align:justify'>
+
+Le informazioni dei dataset analizzati sono state estratte dai profili pubblici di alcuni utenti iscritti ad un sito di incontri chiamato OkCupid.
+
+Lo scopo di questa competizione era di classificare se la professione di un utente appartenesse alla categoria "STEM". 
+
+Al fine di raggiungere l'obiettivo, abbiamo utilizzato un dataset contenente 10000 osservazioni, suddividendo il training (n=6000) dal test set (n=4000). 
+I predittori presenti in entrambi dataset identificano sia le caratteriche personali di ciascun utente sia il loro stile di vita.
+
+Trattandosi di un problema di classificazione, la previsione viene valutata in termini di AUC e la tecnica che ci ha fornito la migliore performance, Ã¨ la ridge.
+
+### References
+<div style='text-align:justify'>
+
+* [AS]   (http://azzalini.stat.unipd.it/Book-DM/index.html)
+* [ISLR] (http://faculty.marshall.usc.edu/gareth-james/)
+* [ESL]  (https://web.stanford.edu/~hastie/ElemStatLearn/)
+* [r4ds] (https://r4ds.had.co.nz/)
+
+```{r startup, include = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = T, eval=T, message=F, warning=F, error=F, comment=NA, cache=F, R.options=list(width=220))
+```
+
+### R code to reproduce the last submission:
+
+```{r,eval=F,warning=F,message=F}
+# get the required R packages
+
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(ggplot2)
+library(pROC)
+require(mosaic)
+
+# import data
+
+train=read.csv("C:/Users/simo2/Documents/Università/ALDO/data mining/dataset DM/OkCupid/112.csv",stringsAsFactors = T) 
+test=read.csv("C:/Users/simo2/Documents/Università/ALDO/data mining/dataset DM/OkCupid/113.csv", stringsAsFactors = T)
+test$Class=NA
+n=nrow(train)
+m=nrow(test)
+p=ncol(train)
+combi=rbind(train,test)
+str(train)
+options(max.print=99999999)
+
+# trasformazione in factor per combi,train e test
+
+for (j in 21:37){
+  combi[,j]=as.factor(combi[,j])
+}
+for (j in 40:109){
+  combi[,j]=as.factor(combi[,j])
+}
+str(combi)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+
+
+
+# BOXPLOT CONDIZIONATI
+plot(train$Class~train$girl)      
+
+# 
+plot(train$Class~train$internet) 
+plot(train$Class~train$math)
+plot(train$Class~train$science)
+plot(train$Class~train$matrix)
+plot(train$Class~train$solving)
+plot(train$Class~train$systems)
+plot(train$Class~train$software)  
+plot(train$Class~train$silicon)
+plot(train$Class~train$scientist)
+plot(train$Class~train$programmer); table(train$programmer) 
+plot(train$Class~train$programming) 
+plot(train$Class~train$mechanical)
+plot(train$Class~train$robots)
+plot(train$Class~train$startup)
+plot(train$Class~train$tech)
+plot(train$Class~train$technical)
+plot(train$Class~train$technology)
+plot(train$Class~train$computer)
+plot(train$Class~train$computers)
+plot(train$Class~train$company)
+plot(train$Class~train$coding); table(train$coding)  
+plot(train$Class~train$code)
+plot(train$Class~train$data)
+plot(train$Class~train$developer)
+plot(train$Class~train$engineer)  
+plot(train$Class~train$engineering)
+plot(train$Class~train$web)
+plot(train$Class~train$websites)
+plot(train$Class~train$biotech)
+plot(train$Class~train$geek)
+plot(train$Class~train$geeky)
+plot(train$Class~train$nerd)
+plot(train$Class~train$fixing)
+plot(train$Class~train$problems)
+plot(train$Class~train$stephenson)
+plot(train$Class~train$ender)
+plot(train$Class~train$firefly)
+plot(train$Class~train$climbing)
+
+# 
+plot(train$Class~train$name)
+plot(train$Class~train$relationship)
+plot(train$Class~train$school)
+plot(train$Class~train$smile)
+plot(train$Class~train$honest)
+plot(train$Class~train$im) 
+plot(train$Class~train$laugh)
+plot(train$Class~train$listening)
+plot(train$Class~train$lol)
+plot(train$Class~train$dancing) 
+plot(train$Class~train$family)   
+plot(train$Class~train$feynman)  
+plot(train$Class~train$hair)
+plot(train$Class~train$heart)
+plot(train$Class~train$law)       
+plot(train$Class~train$student)
+plot(train$Class~train$teacher)
+plot(train$Class~train$teach)
+plot(train$Class~train$techie); table(train$techie)   
+plot(train$Class~train$school)    
+plot(train$Class~train$student)
+plot(train$Class~train$teacher)
+plot(train$Class~train$therapist)
+plot(train$Class~train$true)
+plot(train$Class~train$wine)
+plot(train$Class~train$writing)
+plot(train$Class~train$art)
+plot(train$Class~train$care)
+plot(train$Class~train$being) 
+
+# 
+train$old=as.factor(train$old)
+plot(train$Class~train$old)
+plot(train$Class~train$lab)
+plot(train$Class~train$friend)
+
+# 
+plot(train$Class~train$lisp) 
+plot(train$Class~train$lisp_fluently)
+plot(train$Class~train$lisp_okay)
+plot(train$Class~train$lisp_poorly) 
+plot(train$Class~train$cpp)
+plot(train$Class~train$cpp_fluently)
+plot(train$Class~train$cpp_okay)
+plot(train$Class~train$cpp_poorly) 
+table(train$cpp,train$lisp)
+
+table(train$cpp)  
+table(train$lisp) 
+
+#.......................................
+plot(train$Class~train$asian)
+plot(train$Class~train$black)
+plot(train$Class~train$hispanic_latin)
+plot(train$Class~train$indian)
+plot(train$Class~train$middle_eastern)
+plot(train$Class~train$native_american)
+plot(train$Class~train$other)
+plot(train$Class~train$pacific_islander)
+plot(train$Class~train$white)
+
+
+plot(train$Class~train$age)  
+table(train$age)
+boxplot(train$age)           
+
+z=boxplot.stats(train$age)
+a=z$out; a 
+
+#############â˜»
+favstats(train$age) 
+
+
+plot(train$Class~train$body_type)  
+table(train$body_type)  
+
+plot(train$Class~train$diet)
+table(train$diet)           
+
+plot(train$Class~train$drinks) 
+table(train$drinks)  
+
+table(train$drugs)
+
+plot(train$Class~train$education)
+table(train$education)   
+
+plot(train$Class~train$education=="graduated_from_ph_d_program")        
+plot(train$Class~train$education=="graduated_from_college_university") 
+plot(train$Class~train$education=="graduated_from_masters_program")     
+plot(train$Class~train$education=="graduated_from_high_school")         
+plot(train$Class~train$education=="graduated_from_law_school")          
+
+ridotto=train[which(train$Class=="stem"),]
+plot(ridotto$education)
+table(ridotto$education) 
+
+
+plot(train$Class~train$height)  
+table(train$height)  
+
+boxplot(train$height)  
+boxplot.stats(train$height) 
+favstats(train$height, data=train) 
+
+
+plot(train$Class~train$income)
+table(train$income) 
+b=which(train$income=="missing")
+plot(train$Class[-b]~train$income[-b])
+a=(names(table(train$income[-b])));a  
+
+table(ridotto$income)
+
+
+plot(train$Class~train$last_online) 
+str(train$last_online)   
+
+boxplot(train$last_online) 
+which.min(boxplot.stats(train$last_online)$out) 
+
+favstats(train$last_online) 
+
+plot(train$Class~train$offspring)
+table(train$offspring) 
+b=which(train$offspring=="kids_missing")
+plot(train$Class[-b]~train$offspring[-b]) 
+a=(names(table(train$offspring[-b])));a   
+
+plot(train$Class~train$orientation)
+table(train$orientation) 
+
+plot(train$Class~train$pets)
+table(train$pets) 
+b=which(train$pets=="pets_missing")
+plot(train$Class[-b]~train$pets[-b]) 
+a=(names(table(train$pets[-b])));a   
+
+
+plot(train$Class~train$religion)  
+table(train$religion) 
+
+
+plot(train$Class~train$religion_modifer)
+table(train$religion_modifer) 
+
+
+plot(train$Class~train$sign) 
+table(train$sign) 
+
+b=which(train$sign=="sign_missing")
+plot(train$Class[-b]~train$sign[-b]) 
+
+plot(train$Class~train$sign_modifer) 
+table(train$sign_modifer)
+
+
+plot(train$Class~train$smokes) 
+table(train$smokes) 
+
+plot(train$Class~train$status) 
+table(train$status) 
+
+
+plot(train$Class~train$where_state) 
+table(train$where_state) 
+table(test$where_state) 
+
+plot(train$Class~train$where_town) 
+table(train$where_town)            
+
+# TRASFORMAZIONE DELLE VARIABILI IN FATTORIALE
+
+combi$last_online_factor=NA
+combi$last_online_factor=ifelse(combi$last_online %in% c(0:2) & !(combi$last_online %in% c(3:360)),paste("entro i 2 min"),
+                                ifelse(combi$last_online %in% c(3:5) & !(combi$last_online %in% c(0:2)) & !(combi$last_online %in% c(6:360)),paste("tra 3 e 5 min"),
+                                       ifelse(combi$last_online %in% c(6:10) & !(combi$last_online %in% c(1:5)) & !(combi$last_online %in% c(11:360)),paste("tra 6 e 10 min"), 
+                                              ifelse(combi$last_online %in% c(11:15) & !(combi$last_online %in% c(1:10)) & !(combi$last_online %in% c(16:360)),paste("tra 11 e 15 min"),
+                                                     ifelse(combi$last_online %in% c(16:20) & !(combi$last_online %in% c(2:15)) & !(combi$last_online %in% c(21:360)),paste("tra 16 e 20 min"),
+                                                            ifelse(combi$last_online %in% c(20:72) & !(combi$last_online %in% c(1:19)) & !(combi$last_online %in% c(73:360)),paste("tra 20 e 72 min"), paste("oltre i 72 min") 
+                                                            ))))))
+
+str(combi$last_online_factor)
+combi$last_online_factor=as.factor(combi$last_online_factor)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+plot(train$Class~train$last_online_factor)  
+
+
+
+combi$essay_length_factor=NA
+combi$essay_length_factor=ifelse(combi$essay_length<=3, paste("<= 3"),
+                                 ifelse(combi$essay_length >3 & combi$essay_length <=3.25, paste("tra 3 e 3.25"),
+                                        ifelse(combi$essay_length >3.25 & combi$essay_length <3.5, paste("tra 3.25 e 3.5"), paste(">=3.5"))))
+
+
+str(combi$essay_length_factor)                              
+combi$essay_length_factor=as.factor(combi$essay_length_factor)
+table(combi$essay_length_factor)
+
+
+combi$age_factor=NA
+plot(combi$Class~ combi$age)
+combi$age_factor=ifelse(combi$age<20, paste("under 20"),
+                        ifelse(combi$age>=20 & combi$age<25, paste("under 25"),
+                               ifelse(combi$age>=25 & combi$age<30, paste("under 30"),
+                                      ifelse(combi$age>=30 & combi$age<35, paste("under 35"),
+                                             ifelse(combi$age>=35 & combi$age<40, paste("under 40"),
+                                                    ifelse(combi$age>=40 & combi$age<45, paste("under 45"),paste("over 45")))))))
+str(combi$age_factor)                                                          
+combi$age_factor=as.factor(combi$age_factor)   
+table(combi$age_factor) 
+combi$height_factor=NA
+plot(train$Class~train$height)
+table(train$height)
+combi$height_factor=ifelse(combi$height<60, paste("under 60"),
+                           ifelse(combi$height>=60 & combi$height<65, paste("under 65"),
+                                  ifelse(combi$height>=65 & combi$height<68, paste("under 68"),
+                                         ifelse(combi$height>=68 & combi$height<70, paste("under 70"),
+                                                ifelse(combi$height>=70 & combi$height<72, paste("under 72"),
+                                                       ifelse(combi$height>=72 & combi$height<75, paste("under 75"),paste("over 75")))))))
+str(combi$height_factor)                                                          
+combi$height_factor=as.factor(combi$height_factor)   
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+
+# FEATURE ENGINEERING
+
+combi$cpp_lisp=ifelse(combi$cpp==1 |combi$cpp_fluently==1 |combi$cpp_ok==1 |combi$cpp_poorly==1 |
+                        combi$lisp==1| combi$lisp_fluently==1| combi$lisp_ok==1| combi$lisp_poorly==1, 1, 0)
+table(combi$cpp_lisp)
+combi=combi[-c(1,7,9,21:28,38)]  
+
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+plot(train$Class~train$cpp_lisp)
+
+
+combi$relig_stem=0  
+combi$relig_stem[combi$religion=="atheism" | combi$religion=="agnosticism" | combi$religion=="hinduism"]=1
+str(combi$relig_stem)
+combi$relig_stem=as.factor(combi$relig_stem)
+which(colnames(combi)=="religion")
+which(colnames(combi)=="religion_modifer")
+combi=combi[,-c(10,16)]  
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+plot(train$Class~train$relig_stem)
+
+
+combi$comp=rep(0)
+combi$comp=ifelse(combi$computer==1,combi$comp+1,combi$comp+0)
+combi$comp=ifelse(combi$computers==1,combi$comp+1,combi$comp+0)
+table(combi$comp)
+str(combi$comp)
+combi$comp=as.factor(combi$comp)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+str(combi$comp)
+plot(train$Class~train$comp)
+
+
+table(train$engineer,train$engineering)
+combi$engi=rep(0)
+combi$engi=ifelse(combi$engineer==1,combi$engi+1,combi$engi+0)
+combi$engi=ifelse(combi$engineering==1,combi$engi+1,combi$engi+0)
+combi$engi=as.factor(combi$engi)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+plot(train$Class~train$engi)
+
+
+table(train$geek,train$geeky) 
+table(train$nerd,train$geek)  
+combi$ge_ne=0
+combi$ge_ne[combi$geek==1 | combi$nerd==1]=1
+combi$ge_ne=as.factor(combi$ge_ne)
+table(combi$ge_ne)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+plot(train$Class~train$ge_ne)
+table(train$ge_ne)
+which(colnames(train)=="geek")
+which(colnames(train)=="geeky")
+which(colnames(train)=="nerd")
+combi=combi[,-c(48,49,66)]
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+
+
+combi$sc=0
+combi$sc[combi$science==1 | combi$scientist==1]=1
+combi$sc=as.factor(combi$sc)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+plot(train$Class~train$sc)
+table(train$sc)
+which(colnames(train)=="science")
+which(colnames(train)=="scientist")
+combi=combi[,-c(71,72)]
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+
+
+combi$conta_cat=rep(0)
+combi$conta_cat=ifelse(combi$age_factor %in% c("under 25","under 30","under 35"), combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$income %in% c("inc80000","inc90000","inc100000","inc150000"), combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$education %in% c("graduated_from_college_university","graduated_from_masters_program","raduated_from_two_year_college","graduated_from_ph_d_program","dropped_out_of_college_university")
+                       , combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$height %in% c("under 72","under 75"), combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$offspring %in% c("doesnt_have_kids","doesnt_have_kids_and_doesnt_want_any",
+                                              "doesnt_have_kids_but_might_want_them","doesnt_have_kids_but_wants_them"
+                                              ,"doesnt_want_kids"), combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$pets %in% c("like_cats","dislikes_dogs_and_likes_cats"), combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$relig_stem==1 , combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=ifelse(combi$smokes=="no", combi$conta_cat+1, combi$conta_cat+0)
+combi$conta_cat=as.factor(combi$conta_cat)
+train=combi[c(1:6000),]
+test=combi[c(6001:10000),]
+table(train$conta_cat)
+str(combi$conta_cat)
+
+
+# MODELLO FINALE
+set.seed(1234)  
+custom<-trainControl(method="repeatedcv",number = 50,repeats = 5,classProbs = T) 
+ridge<-train(Class~.,train,method="glmnet",tuneGrid=expand.grid(alpha=0,
+                     lambda = seq(0.2,0.95,length.out = 10)),trControl=custom,standardize=T)
+
+
+plot(ridge)
+y.ridge<-predict(ridge,newdata = test,type = "prob")
+phat.ridge=y.ridge[2]
+coefficients.ridge <- coef(ridge$finalModel,ridge$bestTune$lambda);
+coefficients.ridge
+ridge$bestTune
+
+# show first 6 predicted values
+head(y.ridge)
+```
